@@ -1,6 +1,7 @@
 import {createContext, ReactNode, useContext, useState} from "react";
-import { api } from "../services/api";
-import {Product} from "../types";
+import {toast} from "react-toastify";
+import {api} from "../services/api";
+import {Product, Stock} from "../types";
 
 interface CartProviderProps {
   children: ReactNode;
@@ -34,8 +35,26 @@ export function CartProvider({children}: CartProviderProps): JSX.Element {
   const addProduct = async (productId: number) => {
     try {
       // TODO
+      var product = cart.find((product) => product.id === productId);
+
+      if (product) {
+        const {amount} = product;
+        updateProductAmount({productId, amount});
+      } else {
+        const {data} = await api.get<Product>(`products/${productId}`);
+        product = data;
+        const {amount} = product;
+
+        if ((await isProductAvaiable({productId, amount})) === false) {
+          return;
+        }
+
+        setCart([...cart, product]);
+        setCartInLocalStorage();
+      }
     } catch {
       // TODO
+      toast.error("Erro na adição do produto");
     }
   };
 
@@ -53,9 +72,42 @@ export function CartProvider({children}: CartProviderProps): JSX.Element {
   }: UpdateProductAmount) => {
     try {
       // TODO
+      if (amount <= 0) return;
+
+      if ((await isProductAvaiable({productId, amount})) === false) {
+        return;
+      }
+
+      var productIndex = cart.findIndex((product) => product.id === productId);
+
+      let updatedCart = [...cart];
+      updatedCart[productIndex].amount++;
+
+      setCart(updatedCart);
+
+      setCartInLocalStorage();
     } catch {
       // TODO
     }
+  };
+
+  const isProductAvaiable = async ({
+    productId,
+    amount,
+  }: UpdateProductAmount) => {
+    const {data} = await api.get<Stock>(`stock/${productId}`);
+    const productStock = data;
+
+    if (amount > productStock.amount) {
+      toast.error("Quantidade solicitada fora de estoque");
+      return false;
+    }
+
+    return true;
+  };
+
+  const setCartInLocalStorage = () => {
+    localStorage.setItem("@RocketShoes:cart", JSON.stringify(cart));
   };
 
   return (
