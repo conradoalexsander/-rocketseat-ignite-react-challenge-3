@@ -47,7 +47,6 @@ const Home = (): JSX.Element => {
   }, []);
 
   function handleAddProduct(id: number) {
-    // TODO
     addProduct(id);
   }
 

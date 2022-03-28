@@ -21,7 +21,6 @@ const Cart = (): JSX.Element => {
   const { cart, removeProduct, updateProductAmount } = useCart();
 
   const cartFormatted = cart.map(product => ({
-    // TODO
     ...product,
     formatedPrice: formatPrice(product.price)
   }));
