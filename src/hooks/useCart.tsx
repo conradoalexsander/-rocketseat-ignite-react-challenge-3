@@ -1,7 +1,7 @@
-import {createContext, ReactNode, useContext, useState} from "react";
-import {toast} from "react-toastify";
-import {api} from "../services/api";
-import {Product, Stock} from "../types";
+import { createContext, ReactNode, useContext, useState } from "react";
+import { toast } from "react-toastify";
+import { api } from "../services/api";
+import { Product, Stock } from "../types";
 
 interface CartProviderProps {
   children: ReactNode;
@@ -16,12 +16,12 @@ interface CartContextData {
   cart: Product[];
   addProduct: (productId: number) => Promise<void>;
   removeProduct: (productId: number) => void;
-  updateProductAmount: ({productId, amount}: UpdateProductAmount) => void;
+  updateProductAmount: ({ productId, amount }: UpdateProductAmount) => void;
 }
 
 const CartContext = createContext<CartContextData>({} as CartContextData);
 
-export function CartProvider({children}: CartProviderProps): JSX.Element {
+export function CartProvider({ children }: CartProviderProps): JSX.Element {
   const [cart, setCart] = useState<Product[]>(() => {
     const storagedCart = localStorage.getItem("@RocketShoes:cart");
 
@@ -32,37 +32,50 @@ export function CartProvider({children}: CartProviderProps): JSX.Element {
     return [];
   });
 
+
   const addProduct = async (productId: number) => {
     try {
       // TODO
       var product = cart.find((product) => product.id === productId);
 
       if (product) {
-        const {amount} = product;
-        updateProductAmount({productId, amount});
-      } else {
-        const {data} = await api.get<Product>(`products/${productId}`);
-        product = data;
-        const {amount} = product;
 
-        if ((await isProductAvaiable({productId, amount})) === false) {
-          return;
-        }
+        updateProductAmount({ productId, amount: product.amount + 1 });
 
-        setCart([...cart, product]);
-        setCartInLocalStorage();
+        return;
+
       }
+
+      const { data } = await api.get<Product>(`products/${productId}`);
+
+      product = data;
+      product.amount = 1;
+
+      if ((await isProductAvaiable({ productId, amount: product.amount })) === false) {
+        return;
+      }
+
+      const updatedCart = [...cart, product];
+
+      setCart(updatedCart);
+
+      setCartInLocalStorage(updatedCart);
+
+      return;
     } catch {
-      // TODO
       toast.error("Erro na adição do produto");
     }
   };
 
   const removeProduct = (productId: number) => {
     try {
-      // TODO
+      let updatedCart = cart.filter((product) => product.id !== productId);
+
+      setCart(updatedCart);
+      setCartInLocalStorage(updatedCart);
+
     } catch {
-      // TODO
+      toast.error('Erro na remoção do produto');
     }
   };
 
@@ -71,23 +84,19 @@ export function CartProvider({children}: CartProviderProps): JSX.Element {
     amount,
   }: UpdateProductAmount) => {
     try {
-      // TODO
       if (amount <= 0) return;
 
-      if ((await isProductAvaiable({productId, amount})) === false) {
+      if ((await isProductAvaiable({ productId, amount })) === false) {
         return;
       }
 
-      var productIndex = cart.findIndex((product) => product.id === productId);
-
       let updatedCart = [...cart];
-      updatedCart[productIndex].amount++;
+      updatedCart.find((product) => product.id === productId)!.amount = amount;
 
       setCart(updatedCart);
-
-      setCartInLocalStorage();
+      setCartInLocalStorage(updatedCart);
     } catch {
-      // TODO
+      toast.error('Quantidade solicitada fora de estoque');
     }
   };
 
@@ -95,7 +104,7 @@ export function CartProvider({children}: CartProviderProps): JSX.Element {
     productId,
     amount,
   }: UpdateProductAmount) => {
-    const {data} = await api.get<Stock>(`stock/${productId}`);
+    const { data } = await api.get<Stock>(`stock/${productId}`);
     const productStock = data;
 
     if (amount > productStock.amount) {
@@ -106,21 +115,19 @@ export function CartProvider({children}: CartProviderProps): JSX.Element {
     return true;
   };
 
-  const setCartInLocalStorage = () => {
-    localStorage.setItem("@RocketShoes:cart", JSON.stringify(cart));
-  };
-
   return (
     <CartContext.Provider
-      value={{cart, addProduct, removeProduct, updateProductAmount}}
+      value={{ cart, addProduct, removeProduct, updateProductAmount }}
     >
       {children}
     </CartContext.Provider>
   );
 }
 
-export function useCart(): CartContextData {
-  const context = useContext(CartContext);
+function setCartInLocalStorage(updatedCart: Product[]) {
+  localStorage.setItem("@RocketShoes:cart", JSON.stringify(updatedCart));
+}
 
-  return context;
+export function useCart(): CartContextData {
+  return useContext(CartContext);
 }

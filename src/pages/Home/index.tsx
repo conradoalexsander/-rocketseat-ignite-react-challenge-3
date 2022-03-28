@@ -1,9 +1,9 @@
-import React, {useEffect, useState} from "react";
-import {MdAddShoppingCart} from "react-icons/md";
-import {useCart} from "../../hooks/useCart";
-import {api} from "../../services/api";
-import {formatPrice} from "../../util/format";
-import {ProductList} from "./styles";
+import React, { useEffect, useState } from "react";
+import { MdAddShoppingCart } from "react-icons/md";
+import { useCart } from "../../hooks/useCart";
+import { api } from "../../services/api";
+import { formatPrice } from "../../util/format";
+import { ProductList } from "./styles";
 
 interface Product {
   id: number;
@@ -22,20 +22,17 @@ interface CartItemsAmount {
 
 const Home = (): JSX.Element => {
   const [products, setProducts] = useState<ProductFormatted[]>([]);
-  const {addProduct, cart} = useCart();
+  const { addProduct, cart } = useCart();
 
   const cartItemsAmount: CartItemsAmount = cart.reduce((sumAmount, product) => {
-    sumAmount[product.id]++;
-    console.log(
-      "🚀 ~ file: index.tsx ~ line 29 ~ constcartItemsAmount:CartItemsAmount=cart.reduce ~ sumAmount",
-      sumAmount
-    );
+    sumAmount[product.id] = product.amount;
+
     return sumAmount;
   }, {} as CartItemsAmount);
 
   useEffect(() => {
     async function loadProducts() {
-      const {data} = await api.get<Product[]>("products");
+      const { data } = await api.get<Product[]>("products");
 
       const productFormatteds: ProductFormatted[] = data.map((product) => {
         const productFormatted = product as ProductFormatted;
